@@ -62,6 +62,7 @@ def create_object(
     location: list[float] | tuple[float, ...] = (0, 0, 0),
     rotation: list[float] | tuple[float, ...] = (0, 0, 0),
     scale: list[float] | tuple[float, ...] = (1, 1, 1),
+    parent: str = "",
 ) -> dict[str, Any]:
     """Create a primitive object in the scene.
 
@@ -72,6 +73,7 @@ def create_object(
         location: XYZ position as a 3-element list/tuple. Defaults to origin.
         rotation: XYZ Euler rotation in radians as a 3-element list/tuple.
         scale: XYZ scale as a 3-element list/tuple. Defaults to (1,1,1).
+        parent: Optional parent object name. The created object will be parented to it.
 
     Returns:
         Dict with the created object's name, type, and location.
@@ -84,13 +86,16 @@ def create_object(
     scale = validate_vector(scale, size=3, name="scale")
 
     conn = get_connection()
-    response = conn.send_command("create_object", {
+    params = {
         "type": type,
         "name": name,
         "location": list(location),
         "rotation": list(rotation),
         "scale": list(scale),
-    })
+    }
+    if parent:
+        params["parent"] = parent
+    response = conn.send_command("create_object", params)
     if response.get("status") == "error":
         raise RuntimeError(f"Blender error: {response.get('result')}")
     return response.get("result")
@@ -532,6 +537,28 @@ def make_single_user(object_name: str, object: bool = True, data: bool = True) -
         "object": object,
         "data": data,
     })
+    if response.get("status") == "error":
+        raise RuntimeError(f"Blender error: {response.get('result')}")
+    return response.get("result")
+
+
+@mcp.tool()
+def get_world_bounds(name: str) -> dict[str, Any]:
+    """Get an object's bounding box in WORLD space (not local).
+
+    Use this BEFORE any scale/move operation to know the object's
+    exact world-space position and dimensions. Returns min/max corners,
+    center point, and dimensions in world units.
+
+    Args:
+        name: Name of the object.
+
+    Returns:
+        Dict with min, max, center, dimensions, location, and scale.
+    """
+    name = validate_object_name(name)
+    conn = get_connection()
+    response = conn.send_command("get_world_bounds", {"name": name})
     if response.get("status") == "error":
         raise RuntimeError(f"Blender error: {response.get('result')}")
     return response.get("result")

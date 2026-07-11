@@ -61,6 +61,14 @@ def handle_create_object(params: dict) -> dict:
             if obj.data:
                 obj.data.name = name
 
+        # Auto-parent if requested
+        parent_name = params.get("parent", "")
+        if parent_name:
+            parent = bpy.data.objects.get(parent_name)
+            if parent:
+                obj.parent = parent
+                obj.matrix_parent_inverse = parent.matrix_world.inverted()
+
         return {
             "name": obj.name,
             "type": obj.type,
@@ -627,6 +635,45 @@ def handle_make_single_user(params: dict) -> dict:
         raise RuntimeError(f"Failed to make single user for '{object_name}': {e}")
 
 
+def handle_get_world_bounds(params: dict) -> dict:
+    """Get object bounds in world space (not local).
+
+    Returns min/max XYZ in world coordinates, plus center and dimensions.
+    Useful for precise positioning before scale/move operations.
+    """
+    name = params.get("name")
+    try:
+        obj = bpy.data.objects.get(name)
+        if obj is None:
+            raise ValueError(f"Object '{name}' not found")
+
+        from mathutils import Vector
+        corners = [obj.matrix_world @ Vector(c) for c in obj.bound_box]
+        xs = [v.x for v in corners]
+        ys = [v.y for v in corners]
+        zs = [v.z for v in corners]
+        min_w = [min(xs), min(ys), min(zs)]
+        max_w = [max(xs), max(ys), max(zs)]
+
+        return {
+            "name": obj.name,
+            "min": min_w,
+            "max": max_w,
+            "center": [(min_w[0] + max_w[0]) / 2,
+                       (min_w[1] + max_w[1]) / 2,
+                       (min_w[2] + max_w[2]) / 2],
+            "dimensions": [max_w[0] - min_w[0],
+                          max_w[1] - min_w[1],
+                          max_w[2] - min_w[2]],
+            "location": list(obj.location),
+            "scale": list(obj.scale),
+        }
+    except ValueError:
+        raise
+    except Exception as e:
+        raise RuntimeError(f"Failed to get world bounds for '{name}': {e}")
+
+
 def register():
     """Register object handlers with the dispatcher."""
     dispatcher.register_handler("create_object", handle_create_object)
@@ -645,3 +692,4 @@ def register():
     dispatcher.register_handler("convert_object", handle_convert_object)
     dispatcher.register_handler("shade_auto_smooth", handle_shade_auto_smooth)
     dispatcher.register_handler("make_single_user", handle_make_single_user)
+    dispatcher.register_handler("get_world_bounds", handle_get_world_bounds)

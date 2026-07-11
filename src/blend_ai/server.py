@@ -1,16 +1,10 @@
 """MCP Server entry point for blend-ai."""
 
 from mcp.server.fastmcp import FastMCP
-
 from blend_ai.connection import BlenderConnection
 
 # Create the MCP server
-mcp = FastMCP(
-    "blend-ai",
-    instructions="The most intuitive and efficient MCP Server for Blender",
-)
-
-# Global connection instance
+_mcp: FastMCP | None = None
 _connection: BlenderConnection | None = None
 
 
@@ -22,37 +16,58 @@ def get_connection() -> BlenderConnection:
     return _connection
 
 
-# Import all tool modules to register them with the MCP server
-from blend_ai.tools import (  # noqa: E402, F401
-    scene,
-    objects,
-    transforms,
-    modeling,
-    materials,
-    lighting,
-    camera,
-    animation,
-    rendering,
-    curves,
-    sculpting,
-    uv,
-    physics,
-    geometry_nodes,
-    armature,
-    collections,
-    file_ops,
-    viewport,
-    code_exec,
-    screenshot,
-    booltool,
-    mesh_editing,
-    mesh_quality,
-    gpencil,
-)
+def create_server() -> FastMCP:
+    """Create and configure the MCP server."""
+    global _mcp
+    if _mcp is not None:
+        return _mcp
+    
+    mcp = FastMCP(
+        "blend-ai",
+        instructions="The most intuitive and efficient MCP Server for Blender",
+    )
+    
+    # CRITICAL: Set module's mcp before importing tool modules
+    # Tool modules do 'from blend_ai.server import mcp' and need it to exist
+    import sys
+    this_mod = sys.modules[__name__]
+    this_mod.mcp = mcp
+    
+    # Import ALL tool modules to register their decorators
+    import blend_ai.tools.scene
+    import blend_ai.tools.objects
+    import blend_ai.tools.transforms
+    import blend_ai.tools.modeling
+    import blend_ai.tools.materials
+    import blend_ai.tools.lighting
+    import blend_ai.tools.camera
+    import blend_ai.tools.animation
+    import blend_ai.tools.rendering
+    import blend_ai.tools.curves
+    import blend_ai.tools.sculpting
+    import blend_ai.tools.uv
+    import blend_ai.tools.physics
+    import blend_ai.tools.geometry_nodes
+    import blend_ai.tools.armature
+    import blend_ai.tools.collections
+    import blend_ai.tools.file_ops
+    import blend_ai.tools.viewport
+    import blend_ai.tools.code_exec
+    import blend_ai.tools.screenshot
+    import blend_ai.tools.booltool
+    import blend_ai.tools.mesh_editing
+    import blend_ai.tools.mesh_quality
+    import blend_ai.tools.gpencil
+    
+    # Import resources and prompts
+    import blend_ai.resources.scene_info  # noqa: F401
+    import blend_ai.prompts.workflows  # noqa: F401
+    
+    _mcp = mcp
+    return mcp
 
-# Import resources and prompts
-from blend_ai.resources import scene_info  # noqa: E402, F401
-from blend_ai.prompts import workflows  # noqa: E402, F401
+
+mcp = create_server()
 
 
 def main():

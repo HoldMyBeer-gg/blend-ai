@@ -300,8 +300,86 @@ blend-ai/
 
 </details>
 
+---
+
+## 🧵 Contribution: Procedural Texture Pipeline Extension
+
+> *A real-world production extension built during the texturing of **303 game assets** (164 scenes + 139 creatures) for a Celestial Chaos MMORPG project.*
+
+### Overview
+
+This extension adds **procedural PNG texture generation + auto-materialization** to the blend-ai ecosystem. It was developed iteratively over 5 days while texturing a Last Chaos remaster project, and has been battle-tested on **422+ textures** with **zero critical errors**.
+
+**Key differentiators:**
+- **14 procedural patterns** (noise, marble, wood, voronoi, gradient, plasma, weave, runes, veins, stripes, cloud, sparks, fire, scales)
+- **Dual pipeline:** Color (RGB) + Roughness (greyscale) maps
+- **Auto-mapping:** 105+ keywords for scene objects, 42 species for creatures, 9 classes for player characters
+- **Color-aware variant detection:** `Fire_Red_Dragon.blend` automatically receives `dragon_scale_red.png`
+- **Non-destructive:** Only textures designated cloth/skin regions, preserves metal, armor, hair, and weapons
+- **Pixel art ready:** `interpolation = 'Closest'`, `Specular IOR = 0`, 64×64 / 128×128 output
+- **Batch processing:** Groups of 3 parallel Blender instances for ~10 min full-pipeline runs
+
+### Stability Improvements Included
+
+During development, the following fixes were contributed to the core blend-ai server:
+
+- **Ping/Pong health check** (`connection.py`): Quick TCP health probe with configurable retry (0.5s × 4 attempts) that verifies Blender addon is alive before attempting command retries
+- **Auto-recovery from stuck render guard** (`connection.py`): When ping fails, sends a `reset_render_guard` command to unstick Blender's render state without requiring a full restart
+- **Lazy server initialization** (`server.py`): Refactored from module-level to lazy singleton pattern for cleaner lifecycle management
+
+### Texture Pipeline Stats
+
+| Metric | Value |
+|--------|-------|
+| Blends processed | 303 |
+| Textures generated | 422+ PNGs |
+| Procedural patterns | 14 |
+| Auto-mapping keywords | 105 (scenes) + 42 (creatures) + 9 (players) |
+| Material property axes documented | 4 (Metallic ↑, Roughness ↑, Alpha ↓, Specular ↑) |
+| Critical errors | **0** |
+
+### Documentation
+
+Full proposal and implementation guide available in:
+- [`docs/proposal/texture-pipeline-proposal.md`](docs/proposal/texture-pipeline-proposal.md) — 7-tool MCP extension proposal
+- [`docs/skills/TEXTURE_PIPELINE_GUIDE.md`](docs/skills/TEXTURE_PIPELINE_GUIDE.md) — Pipeline architecture and usage
+- [`docs/skills/forge_core.py`](docs/skills/forge_core.py) — Core 14-pattern texture generator (reference implementation)
+
+### Acknowledgements
+
+Special thanks to the blend-ai team for creating such an intuitive and efficient MCP server for Blender. This tool was instrumental in getting our game art pipeline off the ground — being able to direct Blender entirely through natural language via an AI agent was a game-changer for rapid prototyping.
+
+The texture pipeline extension was developed for **Celestial Chaos**, a community-driven remaster of the classic MMORPG Last Chaos. For the full project context, see [details.md](https://github.com/ignisky/celestial-chaos) (project documentation).
+
+---
+
+## Branch Information
+
+This contribution lives on the `feat/texture-pipeline` branch. The original `main` branch remains untouched.
+
+To checkout:
+```bash
+git checkout feat/texture-pipeline
+```
+
+File structure added by this contribution:
+```
+docs/
+├── proposal/
+│   └── texture-pipeline-proposal.md    # 7-tool MCP extension proposal
+└── skills/
+    ├── TEXTURE_PIPELINE_GUIDE.md        # Pipeline architecture & best practices
+    └── forge_core.py                   # Core generator (14 patterns, 354 lines)
+```
+
+### Known Limitations
+
+- **Modeling precision:** Small object positioning via MCP can shift the model more than expected. Manual refinement in Blender is recommended for detailed assemblies.
+- **Animations:** Not yet explored through the MCP interface. The pipeline focuses exclusively on static asset texturing.
+- **UV mapping:** Passive investigation only. UV coordinates are preserved from the original .blend files and not modified by the materializer.
+
 ## License
 
 AGPL-3.0-or-later. See [LICENSE](LICENSE).
 
-Copyright © 2026 jabberwock.
+Copyright © 2026 jabberwock. Texture pipeline extension © 2026 Ignacio Badenes (@ignisky).

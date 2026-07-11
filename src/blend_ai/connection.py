@@ -29,6 +29,9 @@ class BlenderConnection:
     BUSY_RETRY_DELAY = 2.0  # seconds between retries when Blender is rendering
     BUSY_MAX_RETRIES = 150  # ~5 minutes of waiting at 2s intervals
 
+    PING_RETRY_DELAY = 0.5  # seconds between ping retries
+    PING_MAX_RETRIES = 4    # max ping attempts before giving up
+
     def __init__(self, host: str = DEFAULT_HOST, port: int = DEFAULT_PORT, timeout: float = DEFAULT_TIMEOUT):
         self._host = host
         self._port = port
@@ -95,6 +98,31 @@ class BlenderConnection:
             remaining -= len(chunk)
         return b"".join(chunks)
 
+    def ping(self) -> bool:
+        """Quick health check — sends 'ping', expects 'pong'.
+        
+        Uses a fresh connection to avoid interfering with any in-flight command.
+        Returns True if Blender responds within timeout.
+        """
+        try:
+            sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+            sock.settimeout(2.0)
+            sock.connect((self._host, self._port))
+            payload = json.dumps({"command": "ping"}).encode("utf-8")
+            sock.sendall(struct.pack(">I", len(payload)) + payload)
+            header = sock.recv(4)
+            length = struct.unpack(">I", header)[0]
+            data = b""
+            while len(data) < length:
+                chunk = sock.recv(min(length - len(data), 65536))
+                if not chunk: break
+                data += chunk
+            sock.close()
+            response = json.loads(data.decode("utf-8"))
+            return response.get("result") == "pong"
+        except Exception:
+            return False
+
     def send_command(self, command: str, params: dict[str, Any] | None = None) -> dict[str, Any]:
         """Send a command to Blender and return the response.
 
@@ -128,7 +156,22 @@ class BlenderConnection:
                     last_error = e  # noqa: F841
                     self.disconnect()
                     if attempt == 0:
-                        continue  # retry with fresh connection
+                        # Ping to check if server is alive before retrying
+                        if self.ping():
+                            continue  # server OK, try fresh connection
+                        logger.warning("Ping failed — Blender addon may be stuck")
+                        # Try to auto-recover: send reset_render_guard
+                        try:
+                            sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+                            sock.settimeout(3.0)
+                            sock.connect((self._host, self._port))
+                            reset_msg = json.dumps({"command": "reset_render_guard"}).encode("utf-8")
+                            sock.sendall(struct.pack(">I", len(reset_msg)) + reset_msg)
+                            sock.close()
+                            time.sleep(0.5)
+                        except Exception:
+                            pass
+                        continue
                     raise BlenderConnectionError(
                         f"Connection to Blender lost: {e}"
                     ) from e

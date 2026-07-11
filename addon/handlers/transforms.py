@@ -185,6 +185,84 @@ def handle_snap_to_grid(params: dict) -> dict:
         raise RuntimeError(f"Failed to snap '{name}' to grid: {e}")
 
 
+def handle_set_location_relative(params: dict) -> dict:
+    """Move an object to a position relative to another object.
+
+    Params:
+        name: Object to move.
+        target: Reference object name.
+        offset: [dx, dy, dz] offset from target's location.
+    """
+    name = params.get("name")
+    target_name = params.get("target")
+    offset = tuple(params.get("offset", (0, 0, 0)))
+
+    try:
+        obj = bpy.data.objects.get(name)
+        if obj is None:
+            raise ValueError(f"Object '{name}' not found")
+
+        target = bpy.data.objects.get(target_name)
+        if target is None:
+            raise ValueError(f"Target object '{target_name}' not found")
+
+        target_loc = target.location
+        obj.location = (target_loc.x + offset[0],
+                        target_loc.y + offset[1],
+                        target_loc.z + offset[2])
+
+        return {
+            "name": obj.name,
+            "relative_to": target_name,
+            "offset": list(offset),
+            "location": list(obj.location),
+        }
+    except ValueError:
+        raise
+    except Exception as e:
+        raise RuntimeError(f"Failed to set relative location for '{name}': {e}")
+
+
+def handle_set_scale_origin(params: dict) -> dict:
+    """Scale an object WITHOUT applying transforms (preserves location).
+
+    Unlike set_scale + apply_transforms, this keeps the object's
+    location and origin intact. Returns effective dimensions after scale.
+    
+    Params:
+        name: Object name.
+        scale: [sx, sy, sz] scale factors.
+    """
+    name = params.get("name")
+    scale = tuple(params.get("scale", (1, 1, 1)))
+
+    try:
+        obj = bpy.data.objects.get(name)
+        if obj is None:
+            raise ValueError(f"Object '{name}' not found")
+
+        # Store original dimensions for reference
+        orig_dims = list(obj.dimensions)
+
+        # Set scale (without applying transforms — location stays correct)
+        obj.scale = scale
+
+        # Calculate effective dimensions
+        new_dims = [orig_dims[i] * scale[i] for i in range(3)]
+
+        return {
+            "name": obj.name,
+            "scale": list(obj.scale),
+            "location": list(obj.location),
+            "dimensions_before": orig_dims,
+            "dimensions_after": [round(d, 4) for d in obj.dimensions],
+        }
+    except ValueError:
+        raise
+    except Exception as e:
+        raise RuntimeError(f"Failed to scale '{name}' preserving origin: {e}")
+
+
 def register():
     """Register transform handlers with the dispatcher."""
     dispatcher.register_handler("set_location", handle_set_location)
@@ -193,3 +271,5 @@ def register():
     dispatcher.register_handler("apply_transforms", handle_apply_transforms)
     dispatcher.register_handler("set_origin", handle_set_origin)
     dispatcher.register_handler("snap_to_grid", handle_snap_to_grid)
+    dispatcher.register_handler("set_location_relative", handle_set_location_relative)
+    dispatcher.register_handler("set_scale_origin", handle_set_scale_origin)

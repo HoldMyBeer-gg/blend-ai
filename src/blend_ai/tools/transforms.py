@@ -174,3 +174,48 @@ def snap_to_grid(name: str, grid_size: float = 1.0) -> dict[str, Any]:
     if response.get("status") == "error":
         raise RuntimeError(f"Blender error: {response.get('result')}")
     return response.get("result")
+
+
+@mcp.tool()
+def set_location_relative(name: str, target: str, offset: list[float] | tuple[float, ...] = (0, 0, 0)) -> dict[str, Any]:
+    """Move an object to a position relative to another object.
+
+    Args:
+        name: Name of the object to move.
+        target: Name of the reference object.
+        offset: Optional [dx, dy, dz] offset from the target's location. Defaults to [0,0,0].
+
+    Returns:
+        Dict with new location and reference info.
+    """
+    name = validate_object_name(name)
+    conn = get_connection()
+    response = conn.send_command("set_location_relative", {
+        "name": name, "target": target, "offset": list(offset)
+    })
+    if response.get("status") == "error":
+        raise RuntimeError(f"Blender error: {response.get('result')}")
+    return response.get("result")
+
+
+@mcp.tool()
+def set_scale_origin(name: str, scale: list[float] | tuple[float, ...]) -> dict[str, Any]:
+    """Scale an object WITHOUT applying transforms (preserves location and origin).
+
+    Use this instead of set_scale + apply_transforms to avoid shifting
+    the object's position. The object's location stays exactly as-is.
+
+    Args:
+        name: Name of the object.
+        scale: [sx, sy, sz] scale factors.
+
+    Returns:
+        Dict with scale, location, and dimensions before/after.
+    """
+    name = validate_object_name(name)
+    scale = validate_vector(scale, 3, name="scale")
+    conn = get_connection()
+    response = conn.send_command("set_scale_origin", {"name": name, "scale": list(scale)})
+    if response.get("status") == "error":
+        raise RuntimeError(f"Blender error: {response.get('result')}")
+    return response.get("result")
