@@ -286,15 +286,18 @@ def _build_sparks(tree, vector, params):
     tree.links.new(vector, voronoi.inputs["Vector"])
     _set(voronoi, "Scale", params["scale"] * 4.0)
 
+    # Math nodes have two inputs both named 'Value', so these must be
+    # addressed by index. Name lookup returns inputs[0] every time, which
+    # would put the constant on the linked socket where it is ignored.
     invert = _new(tree, "ShaderNodeMath", "Invert", _COL_ADJUST, 150)
     invert.operation = "SUBTRACT"
-    _set(invert, "Value", 1.0)
+    invert.inputs[0].default_value = 1.0
     tree.links.new(voronoi.outputs["Distance"], invert.inputs[1])
 
     sharpen = _new(tree, "ShaderNodeMath", "Sharpen", _COL_ADJUST, -150)
     sharpen.operation = "POWER"
     tree.links.new(invert.outputs["Value"], sharpen.inputs[0])
-    _set(sharpen, "Value", 8.0)
+    sharpen.inputs[1].default_value = 8.0
     return sharpen.outputs["Value"]
 
 

@@ -111,3 +111,42 @@ class TestClientCleanup:
         server._handle_client(mock_client)
 
         mock_client.close.assert_called()
+
+
+class TestNonFiniteJSON:
+    """Python's json parser accepts NaN and Infinity by default.
+
+    Assigning those into Blender properties writes garbage that persists
+    into the saved .blend, so they are refused at the protocol boundary
+    rather than in each individual handler.
+    """
+
+    def test_reject_non_finite_raises(self, server_module):
+        with pytest.raises(ValueError):
+            server_module._reject_non_finite("Infinity")
+
+    def test_parser_rejects_infinity(self, server_module):
+        import json
+
+        with pytest.raises(ValueError):
+            json.loads(
+                '{"v": Infinity}',
+                parse_constant=server_module._reject_non_finite,
+            )
+
+    def test_parser_rejects_nan(self, server_module):
+        import json
+
+        with pytest.raises(ValueError):
+            json.loads(
+                '{"v": NaN}', parse_constant=server_module._reject_non_finite
+            )
+
+    def test_parser_accepts_ordinary_numbers(self, server_module):
+        import json
+
+        parsed = json.loads(
+            '{"v": 1.5, "w": -2}',
+            parse_constant=server_module._reject_non_finite,
+        )
+        assert parsed == {"v": 1.5, "w": -2}

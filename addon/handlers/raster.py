@@ -20,6 +20,31 @@ from .. import dispatcher
 # detail maps, not photographs, and the cost is quadratic in size.
 MAX_RASTER_SIZE = 2048
 MAX_RASTER_COUNT = 512
+MAX_RASTER_SEED = 2**31 - 1
+
+# Exactly RGBA. Enforced here rather than trusted from the tool layer: the
+# canvas allocation scales with this length, so it is the one field where a
+# wrong size turns into an out-of-memory rather than a wrong colour.
+RASTER_COLOR_COMPONENTS = 4
+
+
+def _validate_color(color, name: str) -> list[float]:
+    """Validate an RGBA colour arriving over the socket."""
+    if not isinstance(color, (list, tuple)):
+        raise ValueError(f"{name} must be a list of {RASTER_COLOR_COMPONENTS} numbers")
+    if len(color) != RASTER_COLOR_COMPONENTS:
+        raise ValueError(
+            f"{name} must have exactly {RASTER_COLOR_COMPONENTS} components, "
+            f"got {len(color)}"
+        )
+    for i, component in enumerate(color):
+        if isinstance(component, bool) or not isinstance(component, (int, float)):
+            raise ValueError(f"{name} component {i} must be a number")
+        if component != component or component in (float("inf"), float("-inf")):
+            raise ValueError(f"{name} component {i} must be finite")
+        if not 0.0 <= component <= 1.0:
+            raise ValueError(f"{name} component {i} must be between 0.0 and 1.0")
+    return [float(c) for c in color]
 
 
 class _Canvas:
@@ -113,13 +138,28 @@ def handle_create_raster_texture(params: dict) -> dict:
         if not 0 <= count <= MAX_RASTER_COUNT:
             raise ValueError(f"count must be 0-{MAX_RASTER_COUNT}, got {count}")
 
+        # Colours are validated here, not only in the MCP tool layer. The
+        # canvas buffer is len(background) * size * size, so an over-long
+        # background multiplies the allocation: a 10000-element list at the
+        # maximum size asks for 167 GB on Blender's main thread and freezes
+        # the application. Any local process can reach this socket, so the
+        # length check has to live on this side of it.
+        foreground = _validate_color(params.get("foreground"), "foreground")
+        background = _validate_color(params.get("background"), "background")
+
+        seed = params.get("seed", 0)
+        if not isinstance(seed, int) or isinstance(seed, bool):
+            raise ValueError("seed must be an integer")
+        if not 0 <= seed <= MAX_RASTER_SEED:
+            raise ValueError(f"seed must be 0-{MAX_RASTER_SEED}, got {seed}")
+
         # A private Random keeps generation reproducible via seed without
         # reseeding the global RNG, which would make unrelated code in
         # Blender suddenly deterministic.
-        rng = random.Random(params.get("seed", 0))
+        rng = random.Random(seed)
 
-        canvas = _Canvas(size, params["background"])
-        draw(canvas, {**params, "count": count}, rng)
+        canvas = _Canvas(size, background)
+        draw(canvas, {**params, "count": count, "foreground": foreground}, rng)
 
         image = bpy.data.images.new(params["name"], size, size, alpha=True)
         # Colorspace MUST be set before the pixels are written. Changing it

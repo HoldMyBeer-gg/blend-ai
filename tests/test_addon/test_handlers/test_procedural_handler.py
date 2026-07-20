@@ -433,6 +433,52 @@ class TestParameters:
         voronoi = find(bpy_materials.get("M"), "ShaderNodeTexVoronoi")
         assert voronoi.feature == "F1"
 
+    def test_math_constants_never_land_on_a_linked_socket(self, ph, bpy_materials):
+        """A Math node has two inputs both named 'Value'.
+
+        Name lookup returns inputs[0] every time, so setting a constant by
+        name puts it on whichever socket happens to be linked, where it is
+        ignored. Sparks shipped with its exponent on the linked input,
+        rendering as x**0.5 instead of x**8.
+
+        A Math node whose inputs are both linked is fine — it needs no
+        constant. What must never happen is a non-default value sitting on
+        a linked socket, which means the write went to the wrong place.
+        """
+        for pattern in sorted(ph.PATTERN_BUILDERS):
+            name = f"M_{pattern}"
+            build(ph, name=name, pattern=pattern)
+            mat = bpy_materials.get(name)
+            linked = {link.to_socket for link in mat.node_tree.links}
+            for node in mat.node_tree.nodes:
+                if node.bl_idname != "ShaderNodeMath":
+                    continue
+                for i, socket in enumerate(node.inputs):
+                    if socket in linked and socket.default_value != 0.0:
+                        raise AssertionError(
+                            f"{pattern}/{node.label}: inputs[{i}] is linked "
+                            f"but carries {socket.default_value}, so the "
+                            f"constant went to the wrong socket"
+                        )
+
+    def test_sparks_exponent_is_on_the_free_socket(self, ph, bpy_materials):
+        build(ph, name="M", pattern="sparks")
+        mat = bpy_materials.get("M")
+        sharpen = next(n for n in mat.node_tree.nodes if n.label == "Sharpen")
+        linked = {link.to_socket for link in mat.node_tree.links}
+        assert sharpen.inputs[0] in linked, "base should be linked"
+        assert sharpen.inputs[1] not in linked, "exponent should be free"
+        assert sharpen.inputs[1].default_value == 8.0
+
+    def test_sparks_invert_constant_is_on_the_free_socket(self, ph, bpy_materials):
+        build(ph, name="M", pattern="sparks")
+        mat = bpy_materials.get("M")
+        invert = next(n for n in mat.node_tree.nodes if n.label == "Invert")
+        linked = {link.to_socket for link in mat.node_tree.links}
+        assert invert.inputs[0] not in linked
+        assert invert.inputs[0].default_value == 1.0
+        assert invert.inputs[1] in linked
+
     def test_wood_uses_ring_bands(self, ph, bpy_materials):
         build(ph, name="M", pattern="wood")
         wave = find(bpy_materials.get("M"), "ShaderNodeTexWave")

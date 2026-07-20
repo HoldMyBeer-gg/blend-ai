@@ -307,6 +307,66 @@ class TestValidation:
         with pytest.raises(RuntimeError):
             build(rh, count=-1)
 
+class TestSocketTrustBoundary:
+    """The addon socket is reachable by any local process.
+
+    The MCP tool layer's validation can be bypassed entirely by connecting
+    to it directly, so these checks must hold in the handler itself.
+    """
+
+    def test_overlong_background_is_rejected(self, rh, bpy_images):
+        """The canvas is len(background) * size * size floats.
+
+        An over-long background multiplies the allocation. At the maximum
+        size a 10000-element list asks for 167 GB on Blender's main thread,
+        which freezes the whole application.
+        """
+        with pytest.raises(RuntimeError):
+            build(rh, size=64, background=[0.0] * 10000)
+
+    def test_overlong_foreground_is_rejected(self, rh, bpy_images):
+        with pytest.raises(RuntimeError):
+            build(rh, foreground=[1.0] * 10000)
+
+    def test_short_color_is_rejected(self, rh, bpy_images):
+        """A 1-component colour would corrupt the buffer stride, not error."""
+        with pytest.raises(RuntimeError):
+            build(rh, foreground=[1.0])
+
+    def test_rgb_without_alpha_is_rejected(self, rh, bpy_images):
+        with pytest.raises(RuntimeError):
+            build(rh, background=[0.0, 0.0, 0.0])
+
+    def test_non_numeric_color_component_is_rejected(self, rh, bpy_images):
+        with pytest.raises(RuntimeError):
+            build(rh, background=["x", 0.0, 0.0, 1.0])
+
+    def test_non_finite_color_component_is_rejected(self, rh, bpy_images):
+        for bad in (float("inf"), float("-inf"), float("nan")):
+            with pytest.raises(RuntimeError):
+                build(rh, background=[bad, 0.0, 0.0, 1.0])
+
+    def test_out_of_range_color_component_is_rejected(self, rh, bpy_images):
+        with pytest.raises(RuntimeError):
+            build(rh, background=[5.0, 0.0, 0.0, 1.0])
+
+    def test_color_must_be_a_list(self, rh, bpy_images):
+        with pytest.raises(RuntimeError):
+            build(rh, background="black")
+
+    def test_buffer_length_is_independent_of_color_input(self, rh, bpy_images):
+        """Whatever a caller sends, the buffer stays size * size * 4."""
+        build(rh, size=16)
+        assert len(bpy_images.get("Runes").pixels.data) == 16 * 16 * 4
+
+    def test_oversized_seed_is_rejected(self, rh, bpy_images):
+        with pytest.raises(RuntimeError):
+            build(rh, seed=2**64)
+
+    def test_non_integer_seed_is_rejected(self, rh, bpy_images):
+        with pytest.raises(RuntimeError):
+            build(rh, seed="abc")
+
     def test_registers_command(self, rh):
         rh.dispatcher.register_handler.reset_mock()
         rh.register()
