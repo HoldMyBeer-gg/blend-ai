@@ -49,6 +49,12 @@ class TestSOKeepalive:
         server = BlenderServer()
 
         mock_client = MagicMock(spec=socket.socket)
+        # _accept_loop spawns a real handler thread for this client. Without a
+        # realistic disconnect, recv() returns a MagicMock — truthy, so the
+        # `if not chunk` guard never fires, but len() == 0, so _recv_exactly
+        # loops forever. The thread then spins for the rest of the session,
+        # growing the heap until pytest's teardown gc collect crawls.
+        mock_client.recv.return_value = b""
         mock_server_socket = MagicMock()
         mock_server_socket.accept.side_effect = [
             (mock_client, ("127.0.0.1", 12345)),
