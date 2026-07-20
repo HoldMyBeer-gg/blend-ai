@@ -72,13 +72,24 @@ class FakeElement:
 
 
 class FakeElements(list):
+    """Ramp elements, kept sorted by position as Blender keeps them.
+
+    Real Blender reorders and reindexes stops on insert and on position
+    change. An append-only fake hides every index-shift bug, which is the
+    same class of defect as the ramp-spacing bug that already shipped.
+    """
+
     def new(self, position):
         element = FakeElement(position, [0.0, 0.0, 0.0, 1.0])
         self.append(element)
+        self.sort(key=lambda e: e.position)
         return element
 
     def remove(self, element):
         list.remove(self, element)
+
+    def resort(self):
+        self.sort(key=lambda e: e.position)
 
 
 class FakeRamp:
@@ -296,7 +307,9 @@ class TestColorRampElements:
         elements = scene["ramp"].color_ramp.elements
         assert len(elements) == 3
         assert result["position"] == 0.5
-        assert list(elements[-1].color) == [1.0, 0.0, 0.0, 1.0]
+        # Not elements[-1]: Blender keeps stops sorted, so a stop added at
+        # 0.5 lands between the 0.0 and 1.0 ones rather than at the end.
+        assert list(elements[result["index"]].color) == [1.0, 0.0, 0.0, 1.0]
 
     def test_add_on_non_ramp_node_raises(self, mh, scene):
         with pytest.raises(RuntimeError):
@@ -353,6 +366,39 @@ class TestColorRampElements:
             {"material_name": "Mat", "node_name": "ColorRamp", "index": 0, "position": 0.2}
         )
         assert scene["ramp"].color_ramp.elements[0].color == before
+
+    def test_add_reports_the_index_after_reordering(self, mh, scene):
+        """Blender keeps ramp stops sorted, so a new stop lands mid-list.
+
+        The handler scans for the element by identity precisely because
+        the insert reorders. Adding at 0.5 between stops at 0.0 and 1.0
+        must report index 1, not the append position of 2.
+        """
+        result = mh.handle_add_color_ramp_element(
+            {
+                "material_name": "Mat",
+                "node_name": "ColorRamp",
+                "position": 0.5,
+                "color": [1.0, 0.0, 0.0, 1.0],
+            }
+        )
+        assert result["index"] == 1
+        elements = scene["ramp"].color_ramp.elements
+        assert [e.position for e in elements] == [0.0, 0.5, 1.0]
+        assert list(elements[1].color) == [1.0, 0.0, 0.0, 1.0]
+
+    def test_add_at_the_start_reports_index_zero(self, mh, scene):
+        ramp = scene["ramp"].color_ramp
+        ramp.elements[0].position = 0.4
+        result = mh.handle_add_color_ramp_element(
+            {
+                "material_name": "Mat",
+                "node_name": "ColorRamp",
+                "position": 0.1,
+                "color": [0.0, 1.0, 0.0, 1.0],
+            }
+        )
+        assert result["index"] == 0
 
     def test_set_element_out_of_range_raises(self, mh, scene):
         with pytest.raises(RuntimeError):

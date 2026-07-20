@@ -72,13 +72,24 @@ class FakeElement:
 
 
 class FakeElements(list):
+    """Ramp elements, kept sorted by position as Blender keeps them.
+
+    Real Blender reorders and reindexes stops on insert and on position
+    change. An append-only fake hides every index-shift bug, which is the
+    same class of defect as the ramp-spacing bug that already shipped.
+    """
+
     def new(self, position):
         element = FakeElement(position, [0.0, 0.0, 0.0, 1.0])
         self.append(element)
+        self.sort(key=lambda e: e.position)
         return element
 
     def remove(self, element):
         list.remove(self, element)
+
+    def resort(self):
+        self.sort(key=lambda e: e.position)
 
 
 class FakeRamp:

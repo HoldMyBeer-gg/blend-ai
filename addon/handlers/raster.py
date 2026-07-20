@@ -117,6 +117,7 @@ RASTER_PATTERNS = {
 
 def handle_create_raster_texture(params: dict) -> dict:
     """Generate an image texture and pack it into the blend file."""
+    image = None
     try:
         pattern = params["pattern"]
         draw = RASTER_PATTERNS.get(pattern)
@@ -179,7 +180,13 @@ def handle_create_raster_texture(params: dict) -> dict:
             "packed": True,
         }
     except Exception as e:
-        raise RuntimeError(f"Failed to create raster texture: {e}")
+        # Do not leave a half-written image datablock behind on failure.
+        if image is not None:
+            try:
+                bpy.data.images.remove(image)
+            except Exception:
+                pass
+        raise RuntimeError(f"Failed to create raster texture: {e}") from e
 
 
 def register():

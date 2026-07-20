@@ -437,7 +437,7 @@ ALLOWED_NODE_PROPERTIES = {
     "wave_type", "wave_profile", "bands_direction", "rings_direction",
     "gradient_type", "offset", "offset_frequency", "squash", "squash_frequency",
     "turbulence_depth",
-    "interpolation", "projection", "extension", "image_user",
+    "interpolation", "projection", "extension",
     "vector_type", "rotation_type", "invert", "space", "uv_map",
     "convert_from", "convert_to", "mode", "component", "axis",
     "attribute_name", "attribute_type", "from_instancer",

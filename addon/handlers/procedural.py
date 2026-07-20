@@ -305,6 +305,15 @@ def _build_sparks(tree, vector, params):
 # coordinates just pushes both ends past the ramp and flattens the result.
 SCALE_INDEPENDENT_PATTERNS = {"gradient"}
 
+# Which patterns actually consume which parameters. Cellular and gradient
+# patterns have no Detail or Distortion socket to write to, so passing those
+# values is a silent no-op. Recorded here so the handler can report what it
+# ignored rather than leaving the caller to wonder why nothing changed.
+PATTERNS_USING_DETAIL = {"noise", "cloud", "wood", "marble", "plasma", "fire"}
+PATTERNS_USING_DISTORTION = {
+    "noise", "cloud", "stripes", "wood", "marble", "plasma", "fire",
+}
+
 PATTERN_BUILDERS = {
     "gradient": _build_gradient,
     "noise": _build_noise,
@@ -362,6 +371,7 @@ def _get_principled(tree):
 
 def handle_create_procedural_material(params: dict) -> dict:
     """Build a complete procedural texture graph as a new material."""
+    mat = None
     try:
         pattern = params["pattern"]
         builder = PATTERN_BUILDERS.get(pattern)
@@ -418,15 +428,34 @@ def handle_create_procedural_material(params: dict) -> dict:
         if bsdf is not None:
             nodes["bsdf"] = bsdf.name
 
+        # Tell the caller which parameters this pattern could not use, so a
+        # value that had no effect is visible rather than silently dropped.
+        ignored = []
+        if pattern in SCALE_INDEPENDENT_PATTERNS:
+            ignored.append("scale")
+        if pattern not in PATTERNS_USING_DETAIL:
+            ignored.append("detail")
+        if pattern not in PATTERNS_USING_DISTORTION:
+            ignored.append("distortion")
+
         return {
             "material": mat.name,
             "pattern": pattern,
             "nodes": nodes,
+            "ignored_params": ignored,
             "connected": bool(params.get("connect_to_bsdf", True)),
             "stops": len(ramp_node.color_ramp.elements),
         }
     except Exception as e:
-        raise RuntimeError(f"Failed to create procedural material: {e}")
+        # Deliver the atomicity this module's docstring promises. Without
+        # this, a failure partway through leaves a half-wired material in
+        # the user's scene that they have to find and delete by hand.
+        if mat is not None:
+            try:
+                bpy.data.materials.remove(mat)
+            except Exception:
+                pass
+        raise RuntimeError(f"Failed to create procedural material: {e}") from e
 
 
 def register():

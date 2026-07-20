@@ -92,7 +92,7 @@ ALLOWED_SHADER_NODE_PROPERTIES = {
     "gradient_type", "offset", "offset_frequency", "squash", "squash_frequency",
     "turbulence_depth",
     # Image / environment texture
-    "interpolation", "projection", "extension", "image_user",
+    "interpolation", "projection", "extension",
     # Vector / mapping / normal
     "vector_type", "rotation_type", "invert", "space", "uv_map",
     "convert_from", "convert_to", "mode", "component", "axis",
@@ -896,9 +896,14 @@ def create_procedural_material(
             busier. 5.0 is a sensible default; try 1-3 for large forms and
             20+ for fine detail.
         detail: Fractal octaves, 0-15. Higher adds finer sub-detail at the
-            cost of render time.
+            cost of render time. Applies to noise, cloud, wood, marble,
+            plasma and fire. The cellular patterns (voronoi, veins, scales,
+            sparks), stripes, weave and gradient have no detail socket and
+            ignore it.
         distortion: Warps the pattern. Small values (0.5-2.0) make wood and
-            marble look organic rather than machine-perfect.
+            marble look organic rather than machine-perfect. Applies to
+            noise, cloud, stripes, wood, marble, plasma and fire. The
+            cellular patterns, weave and gradient ignore it.
         roughness: Surface roughness 0-1 for the Principled BSDF.
         metallic: Metallic 0-1 for the Principled BSDF.
         colors: Optional list of RGB or RGBA colours for the ramp, in order.
@@ -911,7 +916,8 @@ def create_procedural_material(
             pattern subtree unconnected for manual wiring.
 
     Returns:
-        Dict with the material name and the created node names.
+        Dict with the material name, the created node names, and
+        ignored_params listing any arguments this pattern could not use.
     """
     name = validate_object_name(name)
     validate_enum(pattern, PROCEDURAL_PATTERNS, name="pattern")
