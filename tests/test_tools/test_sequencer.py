@@ -66,11 +66,11 @@ class TestAddImageSequenceStrip:
         with pytest.raises(ValidationError):
             add_image_sequence_strip(str(script))
 
-    def test_relative_path_is_refused(self, mock_conn):
+    def test_relative_path_to_a_missing_file_is_refused(self, mock_conn):
         from blenderwright.tools.sequencer import add_image_sequence_strip
 
         with pytest.raises(ValidationError):
-            add_image_sequence_strip("frames/f_0001.png")
+            add_image_sequence_strip("no_such_folder/f_0001.png")
 
     @pytest.mark.parametrize("channel", [0, 129, -1])
     def test_channel_out_of_range(self, mock_conn, frame, channel):
@@ -212,11 +212,16 @@ class TestRenderVideo:
         with pytest.raises(ValidationError):
             render_video("/tmp/out.mp4", quality="ULTRA")
 
-    def test_relative_path_is_refused(self, mock_conn):
+    def test_relative_path_is_sent_as_an_absolute_one(self, mock_conn):
+        """Blender would resolve a relative path against the .blend instead."""
+        import os
+
         from blenderwright.tools.sequencer import render_video
 
-        with pytest.raises(ValidationError):
-            render_video("out.mp4")
+        render_video("out.mp4")
+        sent = mock_conn.send_command.call_args[0][1]["filepath"]
+        assert os.path.isabs(sent)
+        assert sent.endswith("out.mp4")
 
 
 class TestBlenderErrors:

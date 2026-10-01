@@ -1,6 +1,5 @@
 """MCP tools for Blender's video sequencer: image strips, sound, and video output."""
 
-import os
 from typing import Any
 
 from blenderwright.connection import BlenderConnection
@@ -54,12 +53,6 @@ def _send(command: str, params: dict[str, Any] | None = None, **send_options: An
     return response.get("result")
 
 
-def _require_absolute(path: str, name: str) -> None:
-    """Refuse a relative path, which Blender would resolve against the .blend."""
-    if not isinstance(path, str) or not os.path.isabs(path):
-        raise ValidationError(f"{name} must be an absolute path")
-
-
 @mcp.tool()
 def add_image_sequence_strip(
     first_frame: str,
@@ -74,7 +67,7 @@ def add_image_sequence_strip(
     extension is added in numeric order, one image per timeline frame.
 
     Args:
-        first_frame: Absolute path to the first image, e.g. /renders/f_0001.png.
+        first_frame: Path to the first image, e.g. /renders/f_0001.png.
         name: Optional name for the strip.
         channel: Sequencer channel, 1-128. Higher channels draw on top.
         frame_start: Timeline frame where the strip begins.
@@ -82,7 +75,6 @@ def add_image_sequence_strip(
     Returns:
         Dict with the strip name, image count, and the frames it covers.
     """
-    _require_absolute(first_frame, "first_frame")
     first_frame = validate_file_path(
         first_frame, allowed_extensions=ALLOWED_STRIP_IMAGE_EXTENSIONS, must_exist=True
     )
@@ -115,7 +107,7 @@ def add_sound_strip(
     """Add an audio file to the sequencer as a sound strip.
 
     Args:
-        filepath: Absolute path to the audio file (.wav, .mp3, .flac, .ogg,
+        filepath: Path to the audio file (.wav, .mp3, .flac, .ogg,
             .m4a, .aac, .opus).
         name: Optional name for the strip.
         channel: Sequencer channel, 1-128.
@@ -127,7 +119,6 @@ def add_sound_strip(
     Returns:
         Dict with the strip name and the frames it covers.
     """
-    _require_absolute(filepath, "filepath")
     filepath = validate_file_path(
         filepath, allowed_extensions=ALLOWED_SOUND_EXTENSIONS, must_exist=True
     )
@@ -195,7 +186,7 @@ def render_video(
     the scene fps.
 
     Args:
-        filepath: Absolute output path. The extension must match the
+        filepath: Output path. The extension must match the
             container: .mp4 for MPEG4, .mkv for MKV, .webm for WEBM.
         container: Video container. One of: MPEG4, MKV, WEBM.
         quality: Encoder quality preset, from LOWEST to LOSSLESS.
@@ -212,7 +203,8 @@ def render_video(
         raise ValidationError(
             f"WEBM cannot carry {audio_codec} audio. Use OPUS or NONE."
         )
-    _require_absolute(filepath, "filepath")
+    # Resolved to an absolute path here: Blender would resolve a relative one
+    # against the .blend, somewhere the caller never named.
     extension = VIDEO_CONTAINER_EXTENSIONS[container]
     filepath = validate_file_path(filepath, allowed_extensions={extension})
 

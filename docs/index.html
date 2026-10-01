@@ -964,10 +964,10 @@ extension is added in numeric order, one image per timeline frame."><h3><a href=
 
 Give the first frame of a numbered sequence, such as the output of
 render_animation. Every file in the same folder that shares its prefix and
-extension is added in numeric order, one image per timeline frame.</p><table class="args"><tbody><tr><th>first_frame</th><td>Absolute path to the first image, e.g. /renders/f_0001.png.</td></tr>
+extension is added in numeric order, one image per timeline frame.</p><table class="args"><tbody><tr><th>first_frame</th><td>Path to the first image, e.g. /renders/f_0001.png.</td></tr>
 <tr><th>name</th><td>Optional name for the strip.</td></tr>
 <tr><th>channel</th><td>Sequencer channel, 1-128. Higher channels draw on top.</td></tr>
-<tr><th>frame_start</th><td>Timeline frame where the strip begins.</td></tr></tbody></table><p class="ret"><span>Returns</span> Dict with the strip name, image count, and the frames it covers.</p></article><article class="tool" id="add_sound_strip" data-search="add_sound_strip add an audio file to the sequencer as a sound strip."><h3><a href="#add_sound_strip">add_sound_strip</a></h3><pre class="sig"><code>add_sound_strip(filepath: str, name: str = &#x27;&#x27;, channel: int = 2, frame_start: int = 1, start_offset: float = 0.0, volume: float = 1.0)</code></pre><p>Add an audio file to the sequencer as a sound strip.</p><table class="args"><tbody><tr><th>filepath</th><td>Absolute path to the audio file (.wav, .mp3, .flac, .ogg, .m4a, .aac, .opus).</td></tr>
+<tr><th>frame_start</th><td>Timeline frame where the strip begins.</td></tr></tbody></table><p class="ret"><span>Returns</span> Dict with the strip name, image count, and the frames it covers.</p></article><article class="tool" id="add_sound_strip" data-search="add_sound_strip add an audio file to the sequencer as a sound strip."><h3><a href="#add_sound_strip">add_sound_strip</a></h3><pre class="sig"><code>add_sound_strip(filepath: str, name: str = &#x27;&#x27;, channel: int = 2, frame_start: int = 1, start_offset: float = 0.0, volume: float = 1.0)</code></pre><p>Add an audio file to the sequencer as a sound strip.</p><table class="args"><tbody><tr><th>filepath</th><td>Path to the audio file (.wav, .mp3, .flac, .ogg, .m4a, .aac, .opus).</td></tr>
 <tr><th>name</th><td>Optional name for the strip.</td></tr>
 <tr><th>channel</th><td>Sequencer channel, 1-128.</td></tr>
 <tr><th>frame_start</th><td>Timeline frame where the sound becomes audible.</td></tr>
@@ -982,7 +982,7 @@ the scene fps."><h3><a href="#render_video">render_video</a></h3><pre class="sig
 Sequencer strips are used when there are any, so frames already rendered
 with render_animation can be assembled with a sound strip in seconds.
 With an empty sequencer the 3D scene is rendered. Playback speed follows
-the scene fps.</p><table class="args"><tbody><tr><th>filepath</th><td>Absolute output path. The extension must match the container: .mp4 for MPEG4, .mkv for MKV, .webm for WEBM.</td></tr>
+the scene fps.</p><table class="args"><tbody><tr><th>filepath</th><td>Output path. The extension must match the container: .mp4 for MPEG4, .mkv for MKV, .webm for WEBM.</td></tr>
 <tr><th>container</th><td>Video container. One of: MPEG4, MKV, WEBM.</td></tr>
 <tr><th>quality</th><td>Encoder quality preset, from LOWEST to LOSSLESS.</td></tr>
 <tr><th>audio_codec</th><td>Audio codec, or NONE for a silent video. WEBM accepts only OPUS or NONE.</td></tr></tbody></table><p class="ret"><span>Returns</span> Dict with the output path, frame range, and fps.</p></article></section>
