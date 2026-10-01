@@ -8,15 +8,15 @@ The most intuitive and efficient MCP Server for Blender. Control Blender entirel
 
 <small>A two-storey Western saloon from a single sentence: "create a Western style 2-story saloon, the outside is more important than any inside detail." Claude Code (Fable 5.1) built the false front, plank siding, balcony, batwing doors and street dressing, then relit it for dusk, all through blenderwright, in about twenty minutes with no manual modelling:</small>
 
-![blenderwright saloon built from one prompt](./saloon.png)
+![blenderwright saloon built from one prompt](https://raw.githubusercontent.com/HoldMyBeer-gg/blenderwright/main/saloon.png)
 
 <small>This was created via Claude Code using the Haiku model and 20 random reference images. It took 5 minutes:</small>
 
-![blenderwright screenshot](./screenshot.png)
+![blenderwright screenshot](https://raw.githubusercontent.com/HoldMyBeer-gg/blenderwright/main/screenshot.png)
 
 <small>Fifteen procedural materials, each built by a single `create_procedural_material` call. The selected ball's node graph below was generated entirely by that one call: coordinates, mapping, noise, height mask, colour ramp, and Principled BSDF, laid out and wired:</small>
 
-![blenderwright procedural shader preview](./shader-preview.png)
+![blenderwright procedural shader preview](https://raw.githubusercontent.com/HoldMyBeer-gg/blenderwright/main/shader-preview.png)
 
 ## Key Features
 
@@ -370,6 +370,6 @@ blenderwright/
 
 ## License
 
-MIT. See [LICENSE.md](LICENSE.md).
+MIT. See [LICENSE.md](https://github.com/HoldMyBeer-gg/blenderwright/blob/main/LICENSE.md).
 
 Copyright © 2026 jabberwock.
