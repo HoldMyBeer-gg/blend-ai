@@ -38,11 +38,20 @@ The most intuitive and efficient MCP Server for Blender. Control Blender entirel
 
 ### 1. Install the MCP server
 
+Nothing to install. With [uv](https://docs.astral.sh/uv/) on your machine, `uvx blenderwright` fetches the server from PyPI and runs it; every client config below uses that one command. Prefer pip? `pip install blenderwright` gives you a `blenderwright` command instead.
+
+<details>
+<summary><strong>Working on blenderwright itself</strong></summary>
+
 ```bash
 git clone https://github.com/HoldMyBeer-gg/blenderwright.git
 cd blenderwright
 uv pip install -e .
 ```
+
+Then point your client at `uv run --directory /path/to/blenderwright blenderwright` instead of `uvx blenderwright`.
+
+</details>
 
 ### 2. Install the Blender addon
 
@@ -84,10 +93,10 @@ In Blender's 3D Viewport, open the **N-panel** (press `N`), find the **blenderwr
 <summary><strong>Claude Code</strong></summary>
 
 ```bash
-claude mcp add blenderwright -- uv run --directory /path/to/blenderwright blenderwright
+claude mcp add blenderwright -- uvx blenderwright
 ```
 
-Replace `/path/to/blenderwright` with the actual path to your clone. Make sure Blender is running with the addon server started before using the tools.
+Make sure Blender is running with the addon server started before using the tools.
 
 **Usage:**
 
@@ -114,14 +123,12 @@ Add blenderwright to your Claude Desktop config (`~/Library/Application Support/
 {
   "mcpServers": {
     "blenderwright": {
-      "command": "uv",
-      "args": ["run", "--directory", "/path/to/blenderwright", "blenderwright"]
+      "command": "uvx",
+      "args": ["blenderwright"]
     }
   }
 }
 ```
-
-Replace `/path/to/blenderwright` with the actual path to your clone.
 
 Restart Claude Desktop. The Blender tools will appear in the tool list.
 
@@ -133,11 +140,11 @@ Restart Claude Desktop. The Blender tools will appear in the tool list.
 blenderwright is a standard MCP server using stdio transport. Any MCP-compatible client can connect by running the server directly:
 
 ```bash
-uv run --directory /path/to/blenderwright blenderwright
-# or: python -m blenderwright.server
+uvx blenderwright
+# or, after pip install blenderwright: blenderwright
 ```
 
-The exact config location and format vary by client (typically JSON or TOML under `~/.<client>/`). The `command` is `uv` and the `args` are `["run", "--directory", "/path/to/blenderwright", "blenderwright"]`.
+The exact config location and format vary by client (typically JSON or TOML under `~/.<client>/`). The `command` is `uvx` and the `args` are `["blenderwright"]`.
 
 The server communicates over stdin/stdout using the MCP protocol. It connects to Blender's addon over TCP on `127.0.0.1:9876` (or your configured port).
 
@@ -363,6 +370,6 @@ blenderwright/
 
 ## License
 
-MIT. See [LICENSE](LICENSE).
+MIT. See [LICENSE.md](LICENSE.md).
 
 Copyright © 2026 jabberwock.
