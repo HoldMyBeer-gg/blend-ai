@@ -79,12 +79,27 @@ class TestGetViewportScreenshot:
         with pytest.raises(RuntimeError, match="Screenshot failed"):
             get_viewport_screenshot()
 
-    def test_returns_result(self, mock_conn):
-        """Returns the result dict from Blender."""
+    def test_returns_image(self, mock_conn):
+        """Returns a real image block, not base64 text."""
+        from mcp.server.fastmcp import Image
+
         result = get_viewport_screenshot()
 
-        assert "base64" in result
-        assert result["format"] == "png"
+        assert isinstance(result, Image)
+        assert result.data == b"test"
+
+    def test_fast_falls_back_to_full_without_viewport(self, mock_conn):
+        """Headless Blender has no viewport, so 'fast' renders through the camera."""
+        ok = mock_conn.send_command.return_value
+        mock_conn.send_command.side_effect = [
+            {"status": "error", "result": "RuntimeError: Cannot use OpenGL render in background mode"},
+            ok,
+        ]
+
+        get_viewport_screenshot()
+
+        assert [c[0][0] for c in mock_conn.send_command.call_args_list] == [
+            "fast_viewport_capture", "capture_viewport"]
 
     def test_max_size_validation_too_small(self):
         """max_size below 64 raises ValidationError."""

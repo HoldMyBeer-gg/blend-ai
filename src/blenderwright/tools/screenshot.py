@@ -1,6 +1,8 @@
 """MCP tool for capturing Blender viewport screenshots."""
 
-from typing import Any
+import base64
+
+from mcp.server.fastmcp import Image
 
 from blenderwright.connection import BlenderConnection
 from blenderwright.server import mcp, get_connection
@@ -14,17 +16,18 @@ ALLOWED_SCREENSHOT_MODES = {"fast", "full"}
 def get_viewport_screenshot(
     max_size: int = 1000,
     mode: str = "fast",
-) -> dict[str, Any]:
+) -> Image:
     """Capture a screenshot of the current Blender 3D viewport.
 
     Args:
         max_size: Maximum size in pixels for the largest dimension (default: 1000).
         mode: Capture mode - 'fast' for instant viewport capture using OpenGL
             (default), 'full' for a complete render through the active render
-            engine.
+            engine. 'fast' falls back to 'full' when Blender has no viewport
+            (headless).
 
     Returns:
-        Dict with base64-encoded PNG image data, width, height, format, and mode.
+        The PNG image.
     """
     max_size = validate_numeric_range(max_size, min_val=64, max_val=4096, name="max_size")
     validate_enum(mode, ALLOWED_SCREENSHOT_MODES, name="mode")
@@ -41,11 +44,15 @@ def get_viewport_screenshot(
     params = {"width": width, "height": height}
     if mode == "fast":
         response = conn.send_command("fast_viewport_capture", params)
-    else:
+        # No usable viewport (headless, no OpenGL context): render through the camera instead.
+        if response.get("status") == "error":
+            mode = "full"
+    if mode == "full":
         response = conn.send_command(
             "capture_viewport", params, timeout=BlenderConnection.RENDER_TIMEOUT
         )
     if response.get("status") == "error":
         raise RuntimeError(f"Screenshot failed: {response.get('result')}")
 
-    return response.get("result")
+    # A real image block: base64 inside a JSON dict reaches the model as plain text.
+    return Image(data=base64.b64decode(response["result"]["base64"]), format="png")

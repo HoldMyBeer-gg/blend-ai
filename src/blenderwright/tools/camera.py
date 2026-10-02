@@ -1,6 +1,9 @@
 """MCP tools for Blender camera operations."""
 
+import base64
 from typing import Any
+
+from mcp.server.fastmcp import Image
 
 from blenderwright.connection import BlenderConnection
 from blenderwright.server import mcp, get_connection
@@ -187,32 +190,35 @@ def point_camera_at(
     return _send_camera_command("point_camera_at", params)
 
 
-@mcp.tool()
+@mcp.tool(structured_output=False)  # dict | Image has no output schema
 def capture_viewport(
     filepath: str = "",
     width: int = 1920,
     height: int = 1080,
-) -> dict[str, Any]:
-    """Render the viewport to a file or return as base64.
+) -> dict[str, Any] | Image:
+    """Render the viewport to a file or return the image.
 
     Args:
-        filepath: Optional absolute path for output image. If empty, returns base64-encoded image.
+        filepath: Optional absolute path for output image. If empty, returns the PNG image.
         width: Render width in pixels, default 1920.
         height: Render height in pixels, default 1080.
 
     Returns:
-        Dict with filepath or base64 image data.
+        Dict with filepath, or the PNG image when no filepath is given.
     """
     if filepath:
         filepath = validate_file_path(filepath, allowed_extensions=ALLOWED_RENDER_EXTENSIONS)
     width = validate_numeric_range(width, min_val=1, max_val=8192, name="width")
     height = validate_numeric_range(height, min_val=1, max_val=8192, name="height")
 
-    return _send_camera_command("capture_viewport", {
+    result = _send_camera_command("capture_viewport", {
         "filepath": filepath,
         "width": int(width),
         "height": int(height),
     }, timeout=BlenderConnection.RENDER_TIMEOUT)
+    if "base64" in result:
+        return Image(data=base64.b64decode(result["base64"]), format="png")
+    return result
 
 
 @mcp.tool()
