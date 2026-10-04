@@ -61,7 +61,7 @@ class TestOutputPathNamesAWritableDirectory:
         with pytest.raises(ValidationError) as exc:
             validate_output_path("/home/nobody-here/shuttle.png", allowed_extensions={".png"})
         message = str(exc.value)
-        assert "/home/nobody-here" in message
+        assert "nobody-here" in message
         assert "does not exist" in message
         assert tempfile.gettempdir() in message
         assert message.rstrip().endswith("shuttle.png")

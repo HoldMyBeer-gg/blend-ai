@@ -81,6 +81,15 @@ def validate_file_path(path: str, allowed_extensions: set[str] | None = None, mu
     return resolved
 
 
+def default_output_path(filename: str) -> str:
+    """A writable default for an output file: the system temp directory.
+
+    /tmp was the default for years and does not exist on Windows, which
+    nothing noticed until the directory check arrived.
+    """
+    return os.path.join(tempfile.gettempdir(), filename)
+
+
 def validate_output_path(
     path: str,
     allowed_extensions: set[str] | None = None,
