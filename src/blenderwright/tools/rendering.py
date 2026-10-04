@@ -8,6 +8,7 @@ from blenderwright.validators import (
     validate_enum,
     validate_numeric_range,
     validate_file_path,
+    validate_output_path,
     ValidationError,
     MAX_RENDER_RESOLUTION,
     MAX_RENDER_SAMPLES,
@@ -130,7 +131,7 @@ def render_image(filepath: str = "/tmp/render.png") -> dict[str, Any]:  # nosec 
     Returns:
         Confirmation dict with the output file path.
     """
-    filepath = validate_file_path(filepath, allowed_extensions=ALLOWED_RENDER_EXTENSIONS)
+    filepath = validate_output_path(filepath, allowed_extensions=ALLOWED_RENDER_EXTENSIONS)
 
     conn = get_connection()
     response = conn.send_command(
@@ -158,7 +159,7 @@ def render_animation(filepath: str = "/tmp/render_", format: str = "PNG") -> dic
         raise ValidationError("filepath must be a non-empty string")
     # Blender resolves a relative path against the .blend, so frames landed
     # somewhere the caller never named. No extension check: this is a prefix.
-    filepath = validate_file_path(filepath, allowed_extensions=None)
+    filepath = validate_output_path(filepath, allowed_extensions=None, allow_directory=True)
     # Validate no null bytes
     if "\x00" in filepath:
         raise ValidationError("filepath contains null bytes")

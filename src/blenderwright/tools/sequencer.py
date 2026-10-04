@@ -9,6 +9,7 @@ from blenderwright.validators import (
     validate_enum,
     validate_numeric_range,
     validate_file_path,
+    validate_output_path,
     ValidationError,
 )
 
@@ -206,7 +207,7 @@ def render_video(
     # Resolved to an absolute path here: Blender would resolve a relative one
     # against the .blend, somewhere the caller never named.
     extension = VIDEO_CONTAINER_EXTENSIONS[container]
-    filepath = validate_file_path(filepath, allowed_extensions={extension})
+    filepath = validate_output_path(filepath, allowed_extensions={extension})
 
     return _send("render_video", {
         "filepath": filepath,
